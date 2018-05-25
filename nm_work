@@ -3,8 +3,7 @@ import pandas as pd
 import datetime
 import json
 from time import strftime, gmtime
-import matplotlib.pyplot as plt
-import numpy as np
+from pandas.io.json import json_normalize
 
 
 url = 'https://rest.coinapi.io/v1/quotes/latest?limit=10000'
@@ -52,12 +51,11 @@ spread_df.columns = ["Pair", "Exchanges", "Arbitrage Value"]
 top_10 = spread_df.nlargest(10, 'Arbitrage Value')
 top_10 = top_10[(top_10 > 0).all(1)]
 
+
+
 def main():    
 
-    pair = ["BCH-BTC", "BCH-ETH","DASH-BTC", "ETC-BTC", "ETH-BTC", "LTC-BTC", "OMG-BTC", "OMG-ETH", "XMR-BTC", "XRP-BTC", "ZEC-BTC", "ZRX-BTC","ZRX-ETH"]
-
-
-    menu = ('Get Prices For Available Trading Pairs', 'Historical', 'Best Chances for Arbitrage', 'Quit')
+    menu = ('Get Prices For Available Trading Pairs', 'Predictions', 'Best Chances for Arbitrage', 'Quit')
     while True:
         print("\n")
         print("Arbitrage On Exchanges")
@@ -68,14 +66,21 @@ def main():
            pair = select_crypto()
            exchange = select_exchange()
            ask, bid = get_prices(exchange, pair)
+           print("\n")
            print("The Ask Price for " + pair + " is " + str(ask))
            print("The Bid Price for " + pair + " is " + str(bid))
            print("\n")
         elif choice == 2:
-            pass
+            print("\n")
+            predexch = get_predexchange()
+            crypto1, crypto2 = pred_crypto()
+            ML_df = get_prediction(crypto1, crypto2,predexch)
+            print(ML_df)
             
         elif choice == 3:
-            print(top_5)
+            print("Arbitrage Opportunities")
+            print("\n")
+            print(top_10)
         elif choice == 4:
             print("bye")
             
@@ -84,6 +89,9 @@ def main():
           return
       
 def display_menu(menu,exit_option=-1):
+    ```
+    This function controls the main menu
+    ```
     for m in menu:
         print(menu.index(m)+1,".  ",m)
     choice = int(input("Enter choice [1-4]: "))
@@ -93,6 +101,10 @@ def display_menu(menu,exit_option=-1):
     return choice
 
 def select_crypto():
+    ```
+    This function returns the currency that we will get the ask & bid price 
+    ```
+    print("Trading Pairs Available ")
     pair = ["BCH-BTC", "BCH-ETH","DASH-BTC", "ETC-BTC", "ETH-BTC", "LTC-BTC", "OMG-BTC", "OMG-ETH", "XMR-BTC", "XRP-BTC", "ZEC-BTC", "ZRX-BTC","ZRX-ETH"]
 
     for p in pair:
@@ -101,9 +113,13 @@ def select_crypto():
     item = crypto-1
     pair = pair[item]
     pair = pair.lower().replace('-','')
-    return pair
+    return pair 
 
 def select_exchange():
+    ```
+    This function returns the exchange that we will find the ask & bid price 
+    ```
+    print("Exchanges Available ")
     exchanges = [x.lower() for x in all_exchanges_list]
     for e in exchanges:
         print(exchanges.index(e)+1,".  ", e)
@@ -113,19 +129,53 @@ def select_exchange():
     return exchange
 
 def get_prices(exchange, pair):
+    ```
+    This function gets the ask & bid function from the above functions.
+    ```
     querystring = {"symbol":'binance:etcbtc'}
     headers = {'Authorization': 'Token 381c9c2468cd4c67b54b8220a81155db9a1d8ac2'}
-    response = requests.request("GET", url, headers=headers, params=querystring)
+    response = r.request("GET", url, headers=headers, params=querystring)
     response = response.text
     parsed = json.loads(response)
     ask = parsed['ask']
     bid = parsed['bid']
     return ask, bid
     
+def get_predexchange():
+    ```
+    This function selects the exchange that we are using to make a prediction
+    ```
+    exchanges = ['Binance', 'Poloniex', 'Bitfinex']
+    for e in exchanges:
+        print(exchanges.index(e)+1,".  ", e)
+    exchange = int(input("Please Select an Exchange For Prediction: "))
+    item = exchange-1
+    predexch = exchanges[item] 
+    return predexch
 
+def pred_crypto():
+    ```
+    This function selects the trading pair that we are using to make a prediction
+    ```
+    pair = ["BCH-BTC", "BCH-ETH","DASH-BTC", "ETC-BTC", "ETH-BTC", "LTC-BTC", "OMG-BTC", "OMG-ETH", "XMR-BTC", "XRP-BTC", "ZEC-BTC", "ZRX-BTC","ZRX-ETH"]
+    for p in pair:
+        print(pair.index(p)+1,".  ", p)
+    crypto = int(input("Please Select Pair to View Prediction: "))
+    item = crypto-1
+    pair = pair[item]
+    crypto1, crypto2 = pair.split('-')
+    return crypto1, crypto2 
 
-
-
+def get_prediction(crypto1, crypto2,predexch):
+    ```
+    This function returns the dataframe of information for prediction
+    ```
+    URL = 'https://min-api.cryptocompare.com/data/histohour?fsym='+crypto1+'&tsym='+crypto2+'&limit=2000&aggregate=1&e='+predexch
+    ML = r.get(URL)
+    ML = json.loads(ML.text)
+    ML_df = json_normalize(ML, record_path = ['Data'],  meta = ['Response','Type','ML','Aggregated'],record_prefix = 'Data_', errors = 'ignore')
+    ML_df = pd.DataFrame(ML_df)
+    return ML_df
 
 if __name__ == "__main__":
     main()
