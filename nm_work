@@ -49,9 +49,8 @@ spread_df = spread_df.reset_index()
 spread_df = pd.melt(spread_df, id_vars='pair')
 spread_df.columns = ["Pair", "Exchanges", "Arbitrage Value"]
 
-top_5 = spread_df.nlargest(5, 'Arbitrage Value')
-
-
+top_10 = spread_df.nlargest(10, 'Arbitrage Value')
+top_10 = top_10[(top_10 > 0).all(1)]
 
 def main():    
 
