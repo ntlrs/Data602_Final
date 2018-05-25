@@ -8,7 +8,7 @@ import numpy as np
 
 
 url = 'https://rest.coinapi.io/v1/quotes/latest?limit=10000'
-headers = {'X-CoinAPI-Key' : '95E0C762-2F08-4ADF-9DFB-FCF36F9E46DF'}
+headers = {'X-CoinAPI-Key' : 'F2F35C56-BE67-4A86-BC00-D5620A306611'}
 coin = r.get(url, headers=headers)
 data = coin.text
 parsed = json.loads(data)
@@ -16,39 +16,9 @@ coin_df = pd.DataFrame.from_dict(parsed, orient='columns')
 
 all_exchanges_df = coin_df
 all_exchanges_df[['exchange','pair']] = coin_df['symbol_id'].str.split('_', expand=True, n=1)
-all_exchanges_df = all_exchanges_df.groupby('exchange').nunique()
-all_exchanges_df= all_exchanges_df.loc[all_exchanges_df['ask_price'] >= 50]
-all_exchanges_df = all_exchanges_df[["exchange"]]
-all_exchanges_list = all_exchanges_df.index.tolist()
+all_exchanges_list = ['BINANCE', 'POLONIEX', 'BITFINEX']
 
-poloniex_df=coin_df[coin_df['symbol_id'].str.match("POLONIEX")]
-poloniex_df[['exchange','pair']] = poloniex_df['symbol_id'].str.split('_', expand=True, n=1)
-poloniex_df = poloniex_df[['ask_price', 'bid_price', 'exchange', 'pair']]
-
-
-binance_df=coin_df[coin_df['symbol_id'].str.match("BINANCE")]
-binance_df[['exchange','pair']] = binance_df['symbol_id'].str.split('_', expand=True, n=1)
-binance_df = binance_df[['ask_price', 'bid_price', 'exchange', 'pair']]
-
-
-bitfinex_df=coin_df[coin_df['symbol_id'].str.match("BITFINEX")]
-bitfinex_df[['exchange','pair']] = bitfinex_df['symbol_id'].str.split('_', expand=True, n=1)
-bitfinex_df = bitfinex_df[['ask_price', 'bid_price', 'exchange', 'pair']]
-
-
-hitbtc_df=coin_df[coin_df['symbol_id'].str.match("HITBTC")]
-hitbtc_df[['exchange','pair']] = hitbtc_df['symbol_id'].str.split('_', expand=True, n=1)
-hitbtc_df = hitbtc_df[['ask_price', 'bid_price', 'exchange', 'pair']]
-
-
-
-exchange = bitfinex_df.merge(binance_df, on="pair", how = 'inner')
-exchanges = exchange.merge(poloniex_df, on="pair", how = "inner")
-exchanges3 = exchanges.merge(bitfinex_df, on="pair", how = "inner")
-exchanges4 = exchanges3.merge(hitbtc_df, on="pair", how = "inner")
-exchanges_df = exchanges4.drop_duplicates('pair')
-exchanges_df.reset_index()
-
+exchanges2_df = all_exchanges_df[all_exchanges_df.exchange.isin(all_exchanges_list)]
 
 ask_price_df = exchanges2_df[['ask_price', 'exchange', 'pair']]
 bid_price_df = exchanges2_df[[ 'bid_price', 'exchange', 'pair']]
@@ -58,37 +28,28 @@ ask_price_df = ask_price_df.pivot(index='pair', columns='exchange')
 ask_price_df = ask_price_df.dropna()
 ask_price_df.columns = ask_price_df.columns.droplevel(0)
 ask_price_df = ask_price_df.rename_axis(None, axis=1)
-ask_price_df["pair"] = ["BCH-BTC", "BCH-ETH","DASH-BTC", "ETC-BTC", "ETH-BTC", "LTC-BTC", "OMG-BTC", "OMG-ETH", "XMR-BTC", "XRP-BTC", "ZEC-BTC", "ZRX-BTC","ZRX-ETH"]
 
 bid_price_df = bid_price_df.drop_duplicates(['exchange','pair'])
 bid_price_df = bid_price_df.pivot(index='pair', columns='exchange')
 bid_price_df = bid_price_df.dropna()
 bid_price_df.columns = bid_price_df.columns.droplevel(0)
 bid_price_df = bid_price_df.rename_axis(None, axis=1)
-bid_price_df["pair"] = ["BCH-BTC", "BCH-ETH","DASH-BTC", "ETC-BTC", "ETH-BTC", "LTC-BTC", "OMG-BTC", "OMG-ETH", "XMR-BTC", "XRP-BTC", "ZEC-BTC", "ZRX-BTC","ZRX-ETH"]
 
 spread_df= pd.DataFrame()
 spread_df["Binance/Bitfinex"] = bid_price_df.iloc[:,0] - ask_price_df.iloc[:,1]
-spread_df["Binance/Hitbtc"] = bid_price_df.iloc[:,0] - ask_price_df.iloc[:,2]
-spread_df["Binance/Poloniex"] = bid_price_df.iloc[:,0] - ask_price_df.iloc[:,3]
+spread_df["Binance/Poloniex"] = bid_price_df.iloc[:,0] - ask_price_df.iloc[:,2]
 spread_df["Bitfinex/Binance"] = bid_price_df.iloc[:,1] - ask_price_df.iloc[:,0]
-spread_df["Bitfinex/Hitbtc"] = bid_price_df.iloc[:,1] - ask_price_df.iloc[:,2]
-spread_df["Bitfinex/Poloniex"] = bid_price_df.iloc[:,1] - ask_price_df.iloc[:,3]
-spread_df["Hitbtc/Binance"] = bid_price_df.iloc[:,2] - ask_price_df.iloc[:,0]
-spread_df["Hitbtc/Bitfinex"] = bid_price_df.iloc[:,2] - ask_price_df.iloc[:,1]
-spread_df["Hitbtc/Poloniex"] = bid_price_df.iloc[:,2] - ask_price_df.iloc[:,3]
-spread_df["Poloniex/Binance"] = bid_price_df.iloc[:,3] - ask_price_df.iloc[:,0]
-spread_df["Poloniex/Bitfinex"] = bid_price_df.iloc[:,3] - ask_price_df.iloc[:,1]
-spread_df["Poloniex/Hitbtc"] = bid_price_df.iloc[:,3] - ask_price_df.iloc[:,2]
-spread_df["pair"] = ["BCH-BTC", "BCH-ETH","DASH-BTC", "ETC-BTC", "ETH-BTC", "LTC-BTC", "OMG-BTC", "OMG-ETH", "XMR-BTC", "XRP-BTC", "ZEC-BTC", "ZRX-BTC","ZRX-ETH"]
-
+spread_df["Bitfinex/Poloniex"] = bid_price_df.iloc[:,1] - ask_price_df.iloc[:,2]
+spread_df["Poloniex/Binance"] = bid_price_df.iloc[:,2] - ask_price_df.iloc[:,0]
+spread_df["Poloniex/Bitfinex"] = bid_price_df.iloc[:,2] - ask_price_df.iloc[:,1]
+spread_df = spread_df.reset_index()
 
 
 
 spread_df = pd.melt(spread_df, id_vars='pair')
 spread_df.columns = ["Pair", "Exchanges", "Arbitrage Value"]
 
-top_10 = spread_df.nlargest(10, 'Arbitrage Value')
+top_5 = spread_df.nlargest(5, 'Arbitrage Value')
 
 
 
@@ -96,20 +57,26 @@ def main():
 
     pair = ["BCH-BTC", "BCH-ETH","DASH-BTC", "ETC-BTC", "ETH-BTC", "LTC-BTC", "OMG-BTC", "OMG-ETH", "XMR-BTC", "XRP-BTC", "ZEC-BTC", "ZRX-BTC","ZRX-ETH"]
 
-   # Design a menu a system
-    menu = ('Prices', 'Historical', 'Top Chances for Arbitrage', 'Quit')
+
+    menu = ('Get Prices For Available Trading Pairs', 'Historical', 'Best Chances for Arbitrage', 'Quit')
     while True:
+        print("\n")
+        print("Arbitrage On Exchanges")
+        print("\n")
+        print("Find Arbitrage Opportunities for Trading Pairs On Poloniex, Binance, and Bitfinex")
         choice = display_menu(menu,exit_option=5)
         if choice == 1:
            pair = select_crypto()
-           prices = get_prices(pair)
-           #print("The Ask Price for " + pair + " is " + ask)
-           #print("The Bid Price for " + pair + " is " + bid)
+           exchange = select_exchange()
+           ask, bid = get_prices(exchange, pair)
+           print("The Ask Price for " + pair + " is " + str(ask))
+           print("The Bid Price for " + pair + " is " + str(bid))
+           print("\n")
         elif choice == 2:
             pass
             
         elif choice == 3:
-            print(top_10)
+            print(top_5)
         elif choice == 4:
             print("bye")
             
@@ -131,14 +98,31 @@ def select_crypto():
 
     for p in pair:
         print(pair.index(p)+1,".  ", p)
-    crypto = int(input("Please Select Pair to View Price or Return to Main Menu: "))
+    crypto = int(input("Please Select Pair to View Price: "))
     item = crypto-1
-    pair = pair[item] 
+    pair = pair[item]
+    pair = pair.lower().replace('-','')
     return pair
 
-def get_prices(pair):
-    ask=ask_price_df.loc[ask_price_df['pair'] == ('SPOT_'+pair)]
-    print(ask)
+def select_exchange():
+    exchanges = [x.lower() for x in all_exchanges_list]
+    for e in exchanges:
+        print(exchanges.index(e)+1,".  ", e)
+    exchange = int(input("Please Select an exchange: "))
+    item = exchange-1
+    exchange = exchanges[item] 
+    return exchange
+
+def get_prices(exchange, pair):
+    querystring = {"symbol":'binance:etcbtc'}
+    headers = {'Authorization': 'Token 381c9c2468cd4c67b54b8220a81155db9a1d8ac2'}
+    response = requests.request("GET", url, headers=headers, params=querystring)
+    response = response.text
+    parsed = json.loads(response)
+    ask = parsed['ask']
+    bid = parsed['bid']
+    return ask, bid
+    
 
 
 
