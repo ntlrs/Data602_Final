@@ -8,6 +8,7 @@ import math
 from sklearn import preprocessing, cross_validation, svm
 from sklearn.linear_model import LinearRegression
 import sklearn.linear_model
+import matplotlib as plt
 
 
 url = 'https://rest.coinapi.io/v1/quotes/latest?limit=10000'
@@ -80,9 +81,11 @@ def main():
             print("\n")
             predexch = get_predexchange()
             crypto1, crypto2 = pred_crypto()
+            print("Getting Prediction for "+crypto1+"-"+crypto2+" on " + predexch)
             ML_df = get_prediction(crypto1, crypto2,predexch)
             forecast_set = get_forecast(ML_df)
-            
+            graph = graphs(ML_df, forecast_set)
+            print(graph)
             
         elif choice == 3:
             print("Arbitrage Opportunities")
@@ -185,34 +188,33 @@ def get_prediction(crypto1, crypto2,predexch):
     return ML_df
     
     
-def get_forecast(ML_df):    
-    ML_df['Data_time'] = pd.to_datetime(ML_df['Data_time'],unit ='s')
-    ML_df['Data_time'] = ML_df['Data_time'] - timedelta(hours=4)
+def get_forecast(ML_df): 
+    pd.options.mode.chained_assignment = None
     df3 = ML_df[['Data_close', 'Data_volumefrom','Data_volumeto']]
     df3['high_change'] = (ML_df['Data_high'].sub(ML_df['Data_close'].shift()).div(ML_df['Data_close'] -1 ).fillna(0))
     df3['price_change'] = (ML_df['Data_close'].sub(ML_df['Data_open'].shift()).div(ML_df['Data_close'] -1 ).fillna(0))
     forecast_col = 'Data_close'
     df3 = df3[np.isfinite(df3['Data_close'])]
-
+    
     #1 day difference 
     forecast_out = int(math.ceil(0.06*len(df3)))
     df3['label'] = df3[forecast_col].shift(-forecast_out)
-
+    
     X = np.array(df3.drop(['label'],1))
-
-
+    
+    
     X = preprocessing.scale(X)
     X_lately = X[-forecast_out:]
     X = X[:-forecast_out]
-
-
+    
+    
     df3.dropna(inplace = True)
     Y = np.array(df3['label'])
     #split data into train and test
     X_train, X_test, Y_train, Y_test = cross_validation.train_test_split(X, Y, test_size = 0.2)
-
-
-
+    
+    
+    
     clf = LinearRegression()
     clf.fit(X_train, Y_train)
     accuracy = clf.score(X_test, Y_test)
@@ -220,5 +222,29 @@ def get_forecast(ML_df):
     forecast_set = clf.predict(X_lately)
     return forecast_set
 
+def graphs(ML_df, forecast_set):
+    ML_df = ML_df[np.isfinite(ML_df['Data_close'])]
+    df = ML_df
+    last_date = df['Data_time'].iloc[-1]
+    unix = 3600
+    last_unix = last_date.timestamp()
+    next_unix = last_unix + unix
+    
+    df['Forecast'] = np.nan
+
+    for i in forecast_set:
+        next_date = datetime.fromtimestamp(next_unix)
+        next_unix += unix 
+        df.loc[next_date] = [np.nan for _ in range(len(df.columns)-1)] + [i]
+
+
+    df['Forecast'].plot()
+    df['Data_close'].plot()
+    plt.legend(loc=4)
+    plt.xlabel('Time')
+    plt.ylabel('Price')
+    plt.show()
+
 if __name__ == "__main__":
     main()
+
