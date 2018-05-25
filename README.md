@@ -9,19 +9,16 @@ There are currently 191 cryptocurrency exchanges throughout the world. Cryptocur
 The large number of exchange choices presents a multitude of problems, since they are unregulated and and disjoined, including a large distribution of prices across the multiple platforms. This presents an opportunity for arbitrage with the different exchanges. 
 
 Proposal:
-Our proposal is to explore the bid and ask prices of top cryptocurrencies among various exchanges that offer public api to find negative spread. If we are able to find a negative spread we can explore what a possible profit one might make from buying on one exchange and selling on another. We will consider trading volume and fees to determine if the trade is suitable to make a profit. The result of our project will be a script that compares current prices of cryptocurrencies and if it finds an opportunity for arbitrage, execute an exchange. 
+Our proposal is to explore the bid and ask prices of some of the top cryptocurrencies among the Binance, Poloniex, and Bitfinex exchanges and try to find negative spread. If we are able to find a negative spread we can explore what a possible profit one might make from buying on one exchange and selling on another. The result of our project will be a script that compares current prices of cryptocurrencies and if it finds an opportunity for arbitrage, 
 
 Data Sources:
-We will be focusing on the top 10 exchanges to look for arbitrage opportunities, for example:
+We will be focusing on the top 3 exchanges to look for arbitrage opportunities:
 
-https://poloniex.com/ 
-https://www.kraken.com/ 
-Gemini.com 
-Coinbase.com (GDAX) 
+Poloniex.com
 Binance.com
-Kucoin.com
-Cryptopia.co.nz
+Bitfinex.com
 
+We will be looking at trading pairs that are traded between these three exchanges.
 
 Risks:
 Trades need to be as close to real time as possible.
