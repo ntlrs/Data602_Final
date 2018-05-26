@@ -188,12 +188,12 @@ def get_prediction(crypto1, crypto2,predexch):
     return ML_df
     
     
-def forecast(ML_df,crypto1, crypto2, predexch):
+def get_forecast(ML_df):
     pd.options.mode.chained_assignment = None 
     last= ML_df['Data_close'].iloc[-1]
     df3 = ML_df[['Data_close', 'Data_volumefrom','Data_volumeto']]
     df3['high_change'] = (ML_df['Data_high'].sub(ML_df['Data_close'].shift()).div(ML_df['Data_close'] -1 ).fillna(0))
-    df3['price_change'] = (ML_df['Data_close'].sub(ML_df['Data_open'].shift()).div(ML_df['Data_close'] -1 ).fillna(0)    
+    df3['price_change'] = (ML_df['Data_close'].sub(ML_df['Data_open'].shift()).div(ML_df['Data_close'] -1 ).fillna(0))    
     forecast_col = 'Data_close'
     df3 = df3[np.isfinite(df3['Data_close'])]
     #Day difference 
@@ -215,9 +215,9 @@ def forecast(ML_df,crypto1, crypto2, predexch):
     accuracy = clf.score(X_test, Y_test)
     accuracy
     forecast_set = clf.predict(X_lately)
-    graphs(ML_df, forecast_set)
-    graphs2(ML_df, forecast_set)
-    estimate(avg_forecast,last,crypto1, crypto2, predexch)
+    return forecast_set
+   
+   
     
 def estimate(avg_forecast,last,crypto1, crypto2, predexch):
     delta = str(avg_forecast - last)
