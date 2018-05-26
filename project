@@ -188,39 +188,43 @@ def get_prediction(crypto1, crypto2,predexch):
     return ML_df
     
     
-def get_forecast(ML_df): 
-    pd.options.mode.chained_assignment = None
+def forecast(ML_df,crypto1, crypto2, predexch):
+    pd.options.mode.chained_assignment = None 
+    last= ML_df['Data_close'].iloc[-1]
     df3 = ML_df[['Data_close', 'Data_volumefrom','Data_volumeto']]
     df3['high_change'] = (ML_df['Data_high'].sub(ML_df['Data_close'].shift()).div(ML_df['Data_close'] -1 ).fillna(0))
-    df3['price_change'] = (ML_df['Data_close'].sub(ML_df['Data_open'].shift()).div(ML_df['Data_close'] -1 ).fillna(0))
+    df3['price_change'] = (ML_df['Data_close'].sub(ML_df['Data_open'].shift()).div(ML_df['Data_close'] -1 ).fillna(0)    
     forecast_col = 'Data_close'
     df3 = df3[np.isfinite(df3['Data_close'])]
-    
-    #1 day difference 
-    forecast_out = int(math.ceil(0.06*len(df3)))
+    #Day difference 
+    forecast_out = int(math.ceil(0.05*len(df3)))
     df3['label'] = df3[forecast_col].shift(-forecast_out)
     
-    X = np.array(df3.drop(['label'],1))
-    
-    
+    X = np.array(df3.drop(['label'],1)) 
     X = preprocessing.scale(X)
     X_lately = X[-forecast_out:]
     X = X[:-forecast_out]
-    
-    
+  
     df3.dropna(inplace = True)
     Y = np.array(df3['label'])
     #split data into train and test
     X_train, X_test, Y_train, Y_test = cross_validation.train_test_split(X, Y, test_size = 0.2)
-    
-    
-    
+
     clf = LinearRegression()
     clf.fit(X_train, Y_train)
     accuracy = clf.score(X_test, Y_test)
     accuracy
     forecast_set = clf.predict(X_lately)
-    return forecast_set
+    graphs(ML_df, forecast_set)
+    graphs2(ML_df, forecast_set)
+    estimate(avg_forecast,last,crypto1, crypto2, predexch)
+    
+def estimate(avg_forecast,last,crypto1, crypto2, predexch):
+    delta = str(avg_forecast - last)
+    if avg_forecast > last:
+        print(crypto1+' is expected to increase by '+ delta +" "+ crypto2 +' on '+ predexch +' in the next 5 days!')
+    else:
+        print(crypto1+' is expected to decrease by '+ delta +" "+ crypto2 +' on '+ predexch +' in the next 5 days!')
 
 def graphs(ML_df, forecast_set):
     ML_df = ML_df[np.isfinite(ML_df['Data_close'])]
@@ -229,6 +233,7 @@ def graphs(ML_df, forecast_set):
     unix = 3600
     last_unix = last_date.timestamp()
     next_unix = last_unix + unix
+    df.set_index('Data_time', inplace=True, drop=True)
     
     df['Forecast'] = np.nan
 
@@ -237,10 +242,34 @@ def graphs(ML_df, forecast_set):
         next_unix += unix 
         df.loc[next_date] = [np.nan for _ in range(len(df.columns)-1)] + [i]
 
+    df['Forecast'].plot()
+    df['Data_close'].plot()
+    plt.legend(loc=1)
+    plt.title('3 Month View')
+    plt.xlabel('Time')
+    plt.ylabel('Price')
+    plt.show()
+    
+def graphs2(ML_df, forecast_set):
+    ML_df = ML_df[np.isfinite(ML_df['Data_close'])]
+    df = ML_df.iloc[-336:]
+    last_date = df['Data_time'].iloc[-1]
+    unix = 3600
+    last_unix = last_date.timestamp()
+    next_unix = last_unix + unix
+    df.set_index('Data_time', inplace=True, drop=True)
+    
+    df['Forecast'] = np.nan
+
+    for i in forecast_set:
+        next_date = datetime.fromtimestamp(next_unix)
+        next_unix += unix 
+        df.loc[next_date] = [np.nan for _ in range(len(df.columns)-1)] + [i]
 
     df['Forecast'].plot()
     df['Data_close'].plot()
-    plt.legend(loc=4)
+    plt.legend(loc=1)
+    plt.title('2 Week View')
     plt.xlabel('Time')
     plt.ylabel('Price')
     plt.show()
