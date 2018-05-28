@@ -229,7 +229,7 @@ def estimate(avg_forecast,last,crypto1, crypto2, predexch):
 def graphs(ML_df, forecast_set):
     ML_df = ML_df[np.isfinite(ML_df['Data_close'])]
     df = ML_df
-    last_date = df['Data_time'].iloc[-1]
+    last_date = pd.to_datetime(df['Data_time'].iloc[-1], unit = 's')
     unix = 3600
     last_unix = last_date.timestamp()
     next_unix = last_unix + unix
@@ -253,7 +253,7 @@ def graphs(ML_df, forecast_set):
 def graphs2(ML_df, forecast_set):
     ML_df = ML_df[np.isfinite(ML_df['Data_close'])]
     df = ML_df.iloc[-336:]
-    last_date = df['Data_time'].iloc[-1]
+    last_date = pd.to_datetime(df['Data_time'].iloc[-1], unit = 's')
     unix = 3600
     last_unix = last_date.timestamp()
     next_unix = last_unix + unix
