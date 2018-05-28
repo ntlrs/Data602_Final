@@ -8,54 +8,7 @@ import math
 from sklearn import preprocessing, cross_validation, svm
 from sklearn.linear_model import LinearRegression
 import sklearn.linear_model
-import matplotlib as plt
-
-
-url = 'https://rest.coinapi.io/v1/quotes/latest?limit=10000'
-headers = {'X-CoinAPI-Key' : 'F2F35C56-BE67-4A86-BC00-D5620A306611'}
-coin = r.get(url, headers=headers)
-data = coin.text
-parsed = json.loads(data)
-coin_df = pd.DataFrame.from_dict(parsed, orient='columns')
-
-all_exchanges_df = coin_df
-all_exchanges_df[['exchange','pair']] = coin_df['symbol_id'].str.split('_', expand=True, n=1)
-all_exchanges_list = ['BINANCE', 'POLONIEX', 'BITFINEX']
-
-exchanges2_df = all_exchanges_df[all_exchanges_df.exchange.isin(all_exchanges_list)]
-
-ask_price_df = exchanges2_df[['ask_price', 'exchange', 'pair']]
-bid_price_df = exchanges2_df[[ 'bid_price', 'exchange', 'pair']]
-
-ask_price_df = ask_price_df.drop_duplicates(['exchange','pair'])
-ask_price_df = ask_price_df.pivot(index='pair', columns='exchange')
-ask_price_df = ask_price_df.dropna()
-ask_price_df.columns = ask_price_df.columns.droplevel(0)
-ask_price_df = ask_price_df.rename_axis(None, axis=1)
-
-bid_price_df = bid_price_df.drop_duplicates(['exchange','pair'])
-bid_price_df = bid_price_df.pivot(index='pair', columns='exchange')
-bid_price_df = bid_price_df.dropna()
-bid_price_df.columns = bid_price_df.columns.droplevel(0)
-bid_price_df = bid_price_df.rename_axis(None, axis=1)
-
-spread_df= pd.DataFrame()
-spread_df["Binance/Bitfinex"] = bid_price_df.iloc[:,0] - ask_price_df.iloc[:,1]
-spread_df["Binance/Poloniex"] = bid_price_df.iloc[:,0] - ask_price_df.iloc[:,2]
-spread_df["Bitfinex/Binance"] = bid_price_df.iloc[:,1] - ask_price_df.iloc[:,0]
-spread_df["Bitfinex/Poloniex"] = bid_price_df.iloc[:,1] - ask_price_df.iloc[:,2]
-spread_df["Poloniex/Binance"] = bid_price_df.iloc[:,2] - ask_price_df.iloc[:,0]
-spread_df["Poloniex/Bitfinex"] = bid_price_df.iloc[:,2] - ask_price_df.iloc[:,1]
-spread_df = spread_df.reset_index()
-
-
-
-spread_df = pd.melt(spread_df, id_vars='pair')
-spread_df.columns = ["Pair", "Exchanges", "Arbitrage Value"]
-
-top_10 = spread_df.nlargest(10, 'Arbitrage Value')
-top_10 = top_10[(top_10 > 0).all(1)]
-
+import matplotlib as pl
 
 
 def main():    
@@ -70,6 +23,12 @@ def main():
         print("Find Arbitrage Opportunities for Trading Pairs On Poloniex, Binance, and Bitfinex")
         choice = display_menu(menu,exit_option=5)
         if choice == 1:
+           coin_df = get_data()
+           all_exchange_list = exchange_list(coin_df)
+           ask_price_df, bid_price_df = get_dataframes(all_exchanges_list)
+           ask_df = ask_df(ask_price_df)
+           bid_df = bid_df(bid_price_df)
+           spread_df = spread_df(ask_df, bid_df)
            pair = select_crypto()
            exchange = select_exchange()
            ask, bid = get_prices(exchange, pair)
@@ -88,6 +47,13 @@ def main():
             print(graph)
             
         elif choice == 3:
+            coin_df = get_data()
+            all_exchange_list = exchange_list(coin_df)
+            ask_price_df, bid_price_df = get_dataframes(all_exchanges_list)
+            ask_df = ask_df(ask_price_df)
+            bid_df = bid_df(bid_price_df)
+            spread_df = spread_df(ask_df, bid_df)
+            top_10 = top_10(spread_df)
             print("Arbitrage Opportunities")
             print("\n")
             print(top_10)
@@ -142,9 +108,10 @@ def get_prices(exchange, pair):
     '''
     This function gets the ask & bid function from the above functions.
     '''
+    url = "https://coinograph.io/ticker/"
     querystring = {"symbol":exchange+':'+pair}
-    headers = {'Authorization': 'Token 381c9c2468cd4c67b54b8220a81155db9a1d8ac2'}
-    response = r.request("GET", url, headers=headers, params=querystring)
+    header = {'Authorization': 'Token 0800f9d409f84e62642f03490e05e058813ce74f'}
+    response = r.request("GET", url, headers=header, params=querystring)
     response = response.text
     parsed = json.loads(response)
     ask = parsed['ask']
@@ -274,5 +241,64 @@ def graphs2(ML_df, forecast_set):
     plt.ylabel('Price')
     plt.show()
 
+
+def get_data():
+    url = 'https://rest.coinapi.io/v1/quotes/latest?limit=10000'
+    headers = {'X-CoinAPI-Key' : '68FDBBAF-CA59-4D11-A41E-51C9D2B67DA4'}
+    coin = r.get(url, headers=headers)
+    data = coin.text
+    parsed = json.loads(data)
+    coin_df = pd.DataFrame.from_dict(parsed, orient='columns')
+    return coin_df
+
+def exchange_list(coin_df):
+    all_exchanges_df = coin_df
+    all_exchanges_df[['exchange','pair']] = coin_df['symbol_id'].str.split('_', expand=True, n=1)
+    all_exchanges_list = ['BINANCE', 'POLONIEX', 'BITFINEX']
+    return all_exchanges_list
+
+def get_dataframes(all_exchanges_list):
+    exchanges2_df = all_exchanges_df[all_exchanges_df.exchange.isin(all_exchanges_list)]
+    ask_price_df = exchanges2_df[['ask_price', 'exchange', 'pair']]
+    bid_price_df = exchanges2_df[[ 'bid_price', 'exchange', 'pair']]
+    return ask_price_df, bid_price_df
+
+def ask_df(ask_price_df):
+    ask_price_df = ask_price_df.drop_duplicates(['exchange','pair'])
+    ask_price_df = ask_price_df.pivot(index='pair', columns='exchange')
+    ask_price_df = ask_price_df.dropna()
+    ask_price_df.columns = ask_price_df.columns.droplevel(0)
+    ask_df = ask_price_df.rename_axis(None, axis=1)
+    return ask_df
+
+def bid_df(bid_price_df):
+    bid_price_df = bid_price_df.drop_duplicates(['exchange','pair'])
+    bid_price_df = bid_price_df.pivot(index='pair', columns='exchange')
+    bid_price_df = bid_price_df.dropna()
+    bid_price_df.columns = bid_price_df.columns.droplevel(0)
+    bid_df = bid_price_df.rename_axis(None, axis=1)
+    return bid_df
+
+def spread_df(ask_df, bid_df):
+    spread_df= pd.DataFrame()
+    spread_df["Binance/Bitfinex"] = bid_df.iloc[:,0] - ask_df.iloc[:,1]
+    spread_df["Binance/Poloniex"] = bid_df.iloc[:,0] - ask_df.iloc[:,2]
+    spread_df["Bitfinex/Binance"] = bid_df.iloc[:,1] - ask_df.iloc[:,0]
+    spread_df["Bitfinex/Poloniex"] = bid_df.iloc[:,1] - ask_df.iloc[:,2]
+    spread_df["Poloniex/Binance"] = bid_df.iloc[:,2] - ask_df.iloc[:,0]
+    spread_df["Poloniex/Bitfinex"] = bid_df.iloc[:,2] - ask_df.iloc[:,1]
+    spread_df = spread_df.reset_index()
+    return spread_df
+
+def top_10(spread_df):
+    spread_df = pd.melt(spread_df, id_vars='pair')
+    spread_df.columns = ["Pair", "Exchanges", "Arbitrage Value"]
+
+    top_10 = spread_df.nlargest(10, 'Arbitrage Value')
+    top_10 = top_10[(top_10 > 0).all(1)]
+    return top_10
+
+
 if __name__ == "__main__":
     main()
+    
