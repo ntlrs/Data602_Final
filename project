@@ -142,9 +142,10 @@ def get_prices(exchange, pair):
     '''
     This function gets the ask & bid function from the above functions.
     '''
-    querystring = {"symbol":'binance:etcbtc'}
-    headers = {'Authorization': 'Token 381c9c2468cd4c67b54b8220a81155db9a1d8ac2'}
-    response = r.request("GET", url, headers=headers, params=querystring)
+    url = "https://coinograph.io/ticker/"
+    querystring = {"symbol":exchange+':'+pair}
+    header = {'Authorization': 'Token 0800f9d409f84e62642f03490e05e058813ce74f'}
+    response = r.request("GET", url, headers=header, params=querystring)
     response = response.text
     parsed = json.loads(response)
     ask = parsed['ask']
